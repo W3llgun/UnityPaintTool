@@ -1,6 +1,6 @@
 # UnityPaintTool
 
-Tool for adding easily lot of objects in the scene.
+Tool to easily add lot of objects in the scene.
 
 Paint Parameter
 
