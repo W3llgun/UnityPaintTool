@@ -7,13 +7,14 @@ using Edit = EditorSpace.EditorImprovement;
 
 namespace EditorSpace
 {
-	/*
-     *  TODO : SPAWN LOGIC / PROCEDURAL & SMART SPAWN WITH WEIGHT PROBABILITY
-     *  BUG:  - Ctrl-Z discard all
-     *			- Multiple object always spawn with the same rotation as the first one
+    /*
+     *  TODO :  - SPAWN LOGIC / PROCEDURAL & SMART SPAWN WITH WEIGHT PROBABILITY
+     *          - More control on random rotation
+     *          
+     *  BUG:    - Multiple object always spawn with the same snap rotation as the first one (snap mode)
      */
 
-	public enum PaintMode
+    public enum PaintMode
     {
         Auto = 1,
         Forced = 2,
@@ -129,7 +130,7 @@ namespace EditorSpace
         // Displayed Variables
         [SerializeField]
         public PaintParam param;
-
+        
         // Private
         Vector3 currentMousePos = Vector3.zero;
         Vector3 lastPaintPos = Vector3.zero;
@@ -154,7 +155,7 @@ namespace EditorSpace
         [MenuItem("Tools/EditorPaint")]
         public static void ShowWindow()
         {
-            EditorWindow.GetWindow(typeof(EditorPaint));
+            EditorWindow.GetWindow(typeof(EditorPaint)).titleContent = new GUIContent("EditorPaint", "");
         }
 
         /// <summary>
