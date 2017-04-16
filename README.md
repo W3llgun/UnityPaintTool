@@ -11,4 +11,18 @@ Tool Setting
 ![EditorSetting](http://i.imgur.com/uC5poFd.png)
 
 # Examples
+Basic
+
 ![Basic Painting](http://i.imgur.com/tp1c44B.gif)
+
+Cancel 
+
+![Cancel Painting](http://i.imgur.com/WKWlur3.gif)
+
+Random Scale and Y Rotation
+
+![Random Painting](http://i.imgur.com/VJDRGAl.gif)
+
+Snap to Normal
+
+![Normal Painting](http://i.imgur.com/pStaEwV.gif)
