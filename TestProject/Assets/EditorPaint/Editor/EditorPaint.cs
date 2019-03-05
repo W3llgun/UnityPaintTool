@@ -529,7 +529,7 @@ namespace EditorSpace
         /// </summary>
         void sceneInput()
         {
-            if (preventCustomUserHotkey(EventType.scrollWheel, EventModifiers.Control, KeyCode.None))
+            if (preventCustomUserHotkey(EventType.ScrollWheel, EventModifiers.Control, KeyCode.None))
             {
                 if (currentEvent.delta.y > 0)
                 {
@@ -542,7 +542,7 @@ namespace EditorSpace
                 }
                 this.Repaint();
             }
-            else if (preventCustomUserHotkey(EventType.scrollWheel, EventModifiers.Alt, KeyCode.None))
+            else if (preventCustomUserHotkey(EventType.ScrollWheel, EventModifiers.Alt, KeyCode.None))
             {
                 if (currentEvent.delta.y > 0)
                 {
@@ -573,12 +573,12 @@ namespace EditorSpace
                 // Disable Paint
                 isPainting = false;
             }
-            else if (isPainting && (currentEvent.type == EventType.mouseDrag))
+            else if (isPainting && (currentEvent.type == EventType.MouseDrag))
             {
                 // Paint
                 painting();
             }
-            else if (currentEvent.alt && currentEvent.control && currentEvent.keyCode == KeyCode.Z && currentEvent.type == EventType.keyDown)
+            else if (currentEvent.alt && currentEvent.control && currentEvent.keyCode == KeyCode.Z && currentEvent.type == EventType.KeyDown)
             {
                 cancel();
             }
