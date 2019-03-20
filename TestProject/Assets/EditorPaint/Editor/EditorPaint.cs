@@ -13,20 +13,24 @@ namespace EditorSpace
      *          
      *  BUG:    - Multiple object always spawn with the same snap rotation as the first one (snap mode)
      */
-
+	 
     public enum PaintMode
     {
         Auto = 1,
         Forced = 2,
         Snap = 3,
-    }
+		SnapToMesh = 4,
+	}
 
     [System.Serializable]
     public class PaintParam
     {
         const string SERIALIZED_NAME = "PaintToolParam";
-        
-        [SerializeField]
+		[SerializeField]
+		public string spawnedPrefix = "";
+		[SerializeField]
+		public List<MeshFilter> filters = new List<MeshFilter>();
+		[SerializeField]
         public float size = 2;
         [SerializeField]
         public int density = 2;
@@ -43,7 +47,7 @@ namespace EditorSpace
         [SerializeField]
         public float maxYPosition = 10;
         [SerializeField]
-        public PaintMode mode = PaintMode.Snap;
+        public PaintMode mode = PaintMode.Auto;
         [SerializeField]
         public float heightForced = 0;
         [SerializeField]
@@ -54,8 +58,14 @@ namespace EditorSpace
         public bool addPrefabNameToGroup = true, gizmoCircle = true, gizmoHeight, gizmoSize = true, gizmoDensity = true, gizmoLayer, gizmoName, gizmoPosition, gizmoNormal, editorPrefabVisual = true;
         [SerializeField]
         public List<PaintObject> objects;
-        
-        public static void Save(PaintParam param, string path)
+		[SerializeField]
+		public Vector3 rotationOffset;
+		[SerializeField]
+		public bool randomPosition = true;
+		[SerializeField]
+		public bool worldPositionTexture = false;
+
+		public static void Save(PaintParam param, string path)
         {
             string filePath = Path.Combine(path, SERIALIZED_NAME);
             if (File.Exists(filePath)) File.Delete(filePath);
@@ -119,7 +129,7 @@ namespace EditorSpace
     /// <summary>
     /// Editor tool for creating(painting) groups of gameobjects like forest or jungle
     /// </summary>
-    public class EditorPaint : EditorWindow
+    public partial class EditorPaint : EditorWindow
     {
         string SERIALIZED_PATH;
         string ROOT_PARENT_NAME = "Paint";
@@ -144,8 +154,9 @@ namespace EditorSpace
         bool isPainting = false;
         int paintNumber = 0;
         int windowsTab = 0;
-        
-        Event currentEvent;
+		
+		float gizmoNormalLenght = 1;
+		Event currentEvent;
         RaycastHit mouseHitPoint;
         List<string> layerNames;
         
@@ -216,28 +227,35 @@ namespace EditorSpace
         void OnGUI()
         {
             Edit.Row(() => {
-                windowsTab = GUILayout.SelectionGrid(windowsTab, new string[] { "Paint", "Setting" }, 2, EditorStyles.toolbarButton);
+                windowsTab = GUILayout.SelectionGrid(windowsTab, new string[] { "Spawning","Paint", "Setting" }, 3, EditorStyles.toolbarButton);
                 if(GUILayout.Button("Exit", EditorStyles.toolbarButton, GUILayout.Width(50)))
                 {
                     this.Close();
                 }
             });
             Edit.View(ref scrollView, () => {
-                dropArea(new Rect(0,0, this.position.width, this.position.height));
-                if (windowsTab == 1)
+                
+                if (windowsTab == 2)
                 {
                     optionTab();
                 }
-                else if (windowsTab == 0)
+                else if (windowsTab == 1)
                 {
-                    float tempSize = param.size;
+					//dropArea(new Rect(0, 0, this.position.width, this.position.height));
+					float tempSize = param.size;
                     int tempDensity = param.density;
                     paintTab();
                     prefabListGUI();
                     datacheck(tempSize, tempDensity);
                 }
+				else
+				{
+					SpawnerTab();
+				}
             });
         }
+		
+		
 
         void dropArea(Rect rct)
         {
@@ -335,23 +353,37 @@ namespace EditorSpace
             }, "Box");
             
         }
-        
-        float gizmoNormalLenght = 1;
+		bool showList;
+
+		void DisplayRaycastType()
+		{
+			param.paintMask = EditorGUILayout.MaskField(new GUIContent("Paint Layer", "on which layer the tool will paint"), param.paintMask, layerNames.ToArray());
+			showList = Edit.List("Meshes", showList, param.filters.Count, (int i, int count) => {
+				if (param.filters.Count <= i) param.filters.Add(null);
+				if (count < param.filters.Count) param.filters.RemoveAt(param.filters.Count - 1);
+				param.filters[i] = (MeshFilter)EditorGUILayout.ObjectField("", param.filters[i], typeof(MeshFilter), true);
+			});
+		}
+
         void paintTab()
         {
             Edit.Column(() =>
             {
-                param.paintMask = EditorGUILayout.MaskField(new GUIContent("Paint Layer","on which layer the tool will paint"), param.paintMask, layerNames.ToArray());
-                param.size = EditorGUILayout.FloatField("Size :", param.size);
+				DisplayRaycastType();
+				
+
+				param.size = EditorGUILayout.FloatField("Size :", param.size);
                 param.density = EditorGUILayout.IntField("Density :", param.density);
-                Edit.Row(() =>
+				param.randomPosition = GUILayout.Toggle(param.randomPosition, "Random Position");
+				Edit.Row(() =>
                 {
                     GUILayout.Label("Random Rotation :");
                     param.rndRotationX = GUILayout.Toggle(param.rndRotationX, "X");
                     param.rndRotationY = GUILayout.Toggle(param.rndRotationY, "Y");
                     param.rndRotationZ = GUILayout.Toggle(param.rndRotationZ, "Z");
                 });
-                Edit.Row(() =>
+				param.rotationOffset = EditorGUILayout.Vector3Field("Rotation Offset", param.rotationOffset);
+				Edit.Row(() =>
                 {
                     param.proximityCheck = EditorGUILayout.Toggle("Proximity Check ", param.proximityCheck);
                     if (param.proximityCheck) param.proximityDistance = EditorGUILayout.Slider(param.proximityDistance, 0.1f, param.size);
@@ -362,7 +394,7 @@ namespace EditorSpace
                     if (GUILayout.Toggle(param.mode == PaintMode.Auto, "Default", EditorStyles.miniButtonLeft, GUILayout.MaxWidth(100))) param.mode = PaintMode.Auto;
                     if (GUILayout.Toggle(param.mode == PaintMode.Forced, "Y-Forced", EditorStyles.miniButtonMid, GUILayout.MaxWidth(100))) param.mode = PaintMode.Forced;
                     if (GUILayout.Toggle(param.mode == PaintMode.Snap, "Snap", EditorStyles.miniButtonRight, GUILayout.MaxWidth(100))) param.mode = PaintMode.Snap;
-                    GUILayout.FlexibleSpace();
+					GUILayout.FlexibleSpace();
                 });
                 if (param.mode == PaintMode.Auto)
                 {
@@ -379,7 +411,14 @@ namespace EditorSpace
                         param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
                     });
                 }
-            },"Box");
+				else if (param.mode == PaintMode.SnapToMesh)
+				{
+					Edit.Column(() =>
+					{
+						param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
+					});
+				}
+			},"Box");
         }
 
         void prefabListGUI()
@@ -392,6 +431,7 @@ namespace EditorSpace
                     if (GUILayout.Button(" + ")) param.listSize++;
                     if (GUILayout.Button(" - ")) param.listSize--;
                 });
+				param.spawnedPrefix = EditorGUILayout.TextField("Spawned Prefix", param.spawnedPrefix);
                 param.listSize = Mathf.Max(0, param.listSize);
                 togglePrefabs = Edit.ToggleGroup(togglePrefabs, "Prefabs", 0,() => {
                     for (int i = 0; i < param.objects.Count; i++)
@@ -442,7 +482,7 @@ namespace EditorSpace
             currentEvent = Event.current;
             updateMousePos(sceneView);
             drawGizmo();
-            sceneInput();
+            SceneInput();
 
             // refresh the scene when mouse move
             if (Event.current.type == EventType.MouseMove || Event.current.type == EventType.MouseDrag) SceneView.RepaintAll();
@@ -453,7 +493,7 @@ namespace EditorSpace
         /// </summary>
         void drawGizmo()
         {
-            if (!enableSceneGizmo) return;
+			if (!enableSceneGizmo) return;
             if (isPainting)
                 Handles.color = Color.red;
             else
@@ -463,9 +503,14 @@ namespace EditorSpace
 
             if (mouseHitPoint.transform)
             {
-                if (paintPosition == null) paintPosition = new GameObject(TEMPORARY_OBJECT_NAME).transform;
+				if (paintPosition == null)
+				{
+					paintPosition = new GameObject(TEMPORARY_OBJECT_NAME).transform;
+					paintPosition.gameObject.AddComponent<EditorSceneGizmo>();
+				}
+				
 
-                paintPosition.rotation = mouseHitPoint.transform.rotation;
+				paintPosition.rotation = mouseHitPoint.transform.rotation;
                 paintPosition.forward = mouseHitPoint.normal;
                 if (param.mode == PaintMode.Forced) pos.y = param.heightForced;
                 if (param.gizmoNormal) Handles.ArrowCap(3, mouseHitPoint.point, paintPosition.rotation, gizmoNormalLenght);
@@ -474,7 +519,9 @@ namespace EditorSpace
             }
             
             Handles.BeginGUI();
-            GUIStyle style = new GUIStyle();
+			
+
+			GUIStyle style = new GUIStyle();
             style.normal.textColor = Color.black;
             GUILayout.BeginArea(new Rect(currentEvent.mousePosition.x + 10, currentEvent.mousePosition.y + 10, 250, 100));
             if (param.gizmoSize) GUILayout.TextField("Size " + param.size, style);
@@ -487,9 +534,11 @@ namespace EditorSpace
             if (param.mode == PaintMode.Forced)
                 GUILayout.TextField("Force-Height " + param.heightForced, style);
             GUILayout.EndArea();
-            Handles.EndGUI();
 
-        }
+			
+			Handles.EndGUI();
+			DrawingSceneSpawner();
+		}
 
         /// <summary>
         /// Update the current mouse position
@@ -499,7 +548,7 @@ namespace EditorSpace
             if(currentEvent.control) HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));    // disable selection rectangle
             RaycastHit hit;
             Ray ray = sceneView.camera.ScreenPointToRay(new Vector2(currentEvent.mousePosition.x, sceneView.camera.pixelHeight - currentEvent.mousePosition.y));
-            if (Physics.Raycast(ray, out hit, 1000, param.paintMask))
+            if (Raycaster(ray, out hit, 1000, param.paintMask))
             {
                 currentMousePos = hit.point;
                 mouseHitPoint = hit;
@@ -512,7 +561,7 @@ namespace EditorSpace
         #endregion
 
         #region KeyboardInput
-        public bool preventCustomUserHotkey(EventType type, EventModifiers codeModifier, KeyCode hotkey)
+        public bool PreventCustomUserHotkey(EventType type, EventModifiers codeModifier, KeyCode hotkey)
         {
             Event e = Event.current; // Grab the current event
 
@@ -527,9 +576,9 @@ namespace EditorSpace
         /// <summary>
         /// Get the Input from the keyboard event
         /// </summary>
-        void sceneInput()
+        void SceneInput()
         {
-            if (preventCustomUserHotkey(EventType.ScrollWheel, EventModifiers.Control, KeyCode.None))
+            if (PreventCustomUserHotkey(EventType.ScrollWheel, EventModifiers.Control, KeyCode.None))
             {
                 if (currentEvent.delta.y > 0)
                 {
@@ -542,7 +591,7 @@ namespace EditorSpace
                 }
                 this.Repaint();
             }
-            else if (preventCustomUserHotkey(EventType.ScrollWheel, EventModifiers.Alt, KeyCode.None))
+            else if (PreventCustomUserHotkey(EventType.ScrollWheel, EventModifiers.Alt, KeyCode.None))
             {
                 if (currentEvent.delta.y > 0)
                 {
@@ -565,7 +614,7 @@ namespace EditorSpace
             {
                 // Active Paint
                 isPainting = true;
-                painting();
+                Painting();
             }
             else if (isPainting && !currentEvent.control || (currentEvent.button != 0 || currentEvent.type == EventType.MouseUp))
             {
@@ -576,18 +625,18 @@ namespace EditorSpace
             else if (isPainting && (currentEvent.type == EventType.MouseDrag))
             {
                 // Paint
-                painting();
+                Painting();
             }
             else if (currentEvent.alt && currentEvent.control && currentEvent.keyCode == KeyCode.Z && currentEvent.type == EventType.KeyDown)
             {
-                cancel();
+                Cancel();
             }
         }
 
         /// <summary>
         /// Revert the last(or more) group painted 
         /// </summary>
-        void cancel()
+        void Cancel()
         {
             if (memory != null && memory.Count > 0)
             {
@@ -606,14 +655,14 @@ namespace EditorSpace
         /// <summary>
         /// Paint a group of gameobject at the mouse position
         /// </summary>
-        void painting()
+        void Painting()
         {
             if (param.objects != null && param.objects.Count > 0)
             {
                 if (Vector3.Distance(lastPaintPos, currentMousePos) > param.size)
                 {
                     lastPaintPos = currentMousePos;
-                    drawPaint();
+                    DrawPaint();
                 }
             }
             else
@@ -625,7 +674,7 @@ namespace EditorSpace
         /// <summary>
         /// initialise the root containing all groups
         /// </summary>
-        void initRootGameObject()
+        void InitRootGameObject()
         {
             if (rootParent == null)
             {
@@ -639,9 +688,9 @@ namespace EditorSpace
         /// <summary>
         /// Add a group to paint
         /// </summary>
-        void drawPaint()
+        void DrawPaint()
         {
-            initRootGameObject();
+            InitRootGameObject();
             int localDensity = param.density;
             Vector3 dir = Quaternion.AngleAxis(Random.Range(0, 360), Vector3.up) * Vector3.right;
             Vector3[] spawnPoint = new Vector3[localDensity];
@@ -655,12 +704,12 @@ namespace EditorSpace
                 dir = Quaternion.AngleAxis(UnityEngine.Random.Range(0, 360), Vector3.up) * Vector3.right;
 
                 // use direction for new position
-                Vector3 spawnPos = getSpawnPosition(dir, spawnPoint);
+                Vector3 spawnPos = GetSpawnPosition(dir, spawnPoint);
                 if (spawnPos != Vector3.zero)
                 {
                     spawnPoint[i] = spawnPos;
                     //create
-                    GameObject obj = spawnObject(spawnPoint[i]);
+                    GameObject obj = SpawnObject(spawnPoint[i]);
                     if (obj) localMem.Add(obj);
                 }
             }
@@ -678,9 +727,12 @@ namespace EditorSpace
             }
         }
 
-        Vector3 getSpawnPosition(Vector3 direction, Vector3[] otherSpawn)
+        Vector3 GetSpawnPosition(Vector3 direction, Vector3[] otherSpawn)
         {
-            if (param.proximityCheck)
+			if (!param.randomPosition)
+				return currentMousePos;
+
+			if (param.proximityCheck)
             {
                 Vector3 tempPos;
                 bool success;
@@ -716,7 +768,7 @@ namespace EditorSpace
         /// <param name="pos">Position to spawn</param>
         /// <param name="parent">Parent of the object</param>
         /// <returns>Return the spawned gameobject</returns>
-        GameObject spawnObject(Vector3 pos)
+        GameObject SpawnObject(Vector3 pos)
         {
 
             int rndIndex = Random.Range(0, param.objects.Count);
@@ -725,12 +777,16 @@ namespace EditorSpace
             if (prefabObj != null)
             {
                 go = (GameObject)PrefabUtility.InstantiatePrefab(prefabObj);
+				go.name = param.spawnedPrefix + go.name;
 
-                if (paintPosition)
+				
+				if (paintPosition)
                 {
                     go.transform.rotation = paintPosition.rotation;
                     go.transform.up = paintPosition.up;
-                }
+					if (param.rotationOffset != Vector3.zero)
+						go.transform.Rotate(param.rotationOffset);
+				}
                 else
                 {
                     go.transform.rotation = Quaternion.identity;
@@ -751,18 +807,23 @@ namespace EditorSpace
                 {
                     go.transform.position = new Vector3(pos.x, param.heightForced, pos.z);
                 }
-                else
+				else if (param.mode == PaintMode.Snap)
+				{
+					PhysicRaycast(go, rndIndex);
+				}
+				else if (param.mode == PaintMode.Snap)
+				{
+					PhysicRaycast(go, rndIndex);
+				}
+				else
                 {
                     go.transform.position = pos;
                 }
 
-                if (param.mode == PaintMode.Snap)
-                {
-                    DoubleRayCast(go, rndIndex);
-                }
+               
                 if (go)
                 {
-                    addObjectToGroup(go, rndIndex);
+                    AddObjectToGroup(go, rndIndex);
                 }
             }
             else
@@ -772,14 +833,16 @@ namespace EditorSpace
             return go;
         }
 
-        void addObjectToGroup(GameObject obj, int index)
+        void AddObjectToGroup(GameObject obj, int index)
         {
             Transform parent = rootParent.transform.Find(GROUP_NAME + (param.addPrefabNameToGroup ? param.objects[index].customName : ""));
             if (parent == null)
             {
                 parent = new GameObject(GROUP_NAME + (param.addPrefabNameToGroup ? param.objects[index].customName : "")).transform;
                 parent.SetParent(rootParent.transform);
-                groups.Add(parent.gameObject);
+				if (groups == null)
+					groups = new List<GameObject>();
+				groups.Add(parent.gameObject);
             }
             obj.transform.SetParent(parent);
         }
@@ -787,27 +850,31 @@ namespace EditorSpace
         #endregion
 
         #region Evolved Paint
-        public bool layerContain(LayerMask mask, int layer)
+        public bool LayerContain(LayerMask mask, int layer)
         {
             return mask == (mask | (1 << layer));
         }
 
-        void DoubleRayCast(GameObject obj, int index)
+        void PhysicRaycast(GameObject obj, int index)
         {
             Vector3 position = obj.transform.position + obj.transform.up * param.maxYPosition;
             obj.transform.position = position;
             obj.SetActive(false);
             RaycastHit groundHit;
-            
-            if (Physics.Raycast(position, -obj.transform.up, out groundHit))
+			Ray ray = new Ray(position, -obj.transform.up);
+			if (Raycaster(ray, out groundHit))
             {
-                RaycastHit objectHit;
-                if (layerContain(param.paintMask, groundHit.collider.gameObject.layer))
+				Debug.Log("Object found");
+				RaycastHit objectHit;
+                if (LayerContain(param.paintMask, groundHit.collider.gameObject.layer))
                 {
-                    obj.SetActive(true);
-                    if (Physics.Raycast(groundHit.point, obj.transform.up, out objectHit) && obj.layer == objectHit.collider.gameObject.layer)
+					Debug.Log("Good layer");
+					obj.SetActive(true);
+					Ray ray2 = new Ray(groundHit.point, obj.transform.up);
+                    if (Raycaster(ray2, out objectHit) && obj.layer == objectHit.collider.gameObject.layer)
                     {
-                        Vector3 newPos;
+						Debug.Log("Back ray found object");
+						Vector3 newPos;
                         float differencialDistance = Vector3.Distance(objectHit.point, obj.transform.position);
                         newPos = groundHit.point + (obj.transform.up * differencialDistance);
                         obj.transform.position = newPos;
@@ -822,8 +889,23 @@ namespace EditorSpace
 			//Debug.Log("Could not find appropriate spawn position");
         }
 
-        #endregion
-    }
+		bool Raycaster(Ray ray, GameObject obj, out RaycastHit objectHit)
+		{
+			return Physics.Raycast(ray, out objectHit, 200, obj.layer);
+		}
+
+		bool Raycaster(Ray ray, out RaycastHit objectHit)
+		{
+			return Physics.Raycast(ray, out objectHit);
+		}
+
+		bool Raycaster(Ray ray, out RaycastHit objectHit, float distance, LayerMask mask)
+		{
+			return Physics.Raycast(ray, out objectHit, distance, mask);
+		}
+		
+		#endregion
+	}
 }
 
 

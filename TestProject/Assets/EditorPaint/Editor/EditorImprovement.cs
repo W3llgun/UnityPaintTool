@@ -70,12 +70,12 @@ namespace EditorSpace
             return value;
         }
 
-        public static bool ToggleGroup(bool value, string name, int indent, System.Action action)
+        public static bool ToggleGroup(bool show, string name, int indent, System.Action action)
         {
             Column(() =>
             {
-                value = EditorGUILayout.Foldout(value, name, true);
-                if (value)
+				show = EditorGUILayout.Foldout(show, name, true);
+                if (show)
                 {
                     Indent(() =>
                     {
@@ -83,8 +83,34 @@ namespace EditorSpace
                     }, indent);
                 }
             });
-            return value;
+            return show;
         }
+
+		public static bool List(string name, bool show, int count, System.Action<int, int> action)
+		{
+			Column(() =>
+			{
+				Row(() =>
+				{
+					count = EditorGUILayout.IntField(name, count);
+					if (GUILayout.Button(" + ")) count++;
+					if (GUILayout.Button(" - ")) count--;
+					count = Mathf.Max(0, count);
+				});
+
+				show = ToggleGroup(show, "", 0, () => {
+					for (int i = 0; i < count; i++)
+					{
+						Row(() =>
+						{
+							action.Invoke(i, count);
+						}, "Box");
+					}
+				});
+				
+			}, "Box");
+			return show;
+		}
     }
 }
 
