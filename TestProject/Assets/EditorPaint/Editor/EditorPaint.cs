@@ -355,9 +355,38 @@ namespace EditorSpace
         }
 		bool showList;
 
-		void DisplayRaycastType()
+		void DisplayMeshesSelected()
 		{
 			param.paintMask = EditorGUILayout.MaskField(new GUIContent("Paint Layer", "on which layer the tool will paint"), param.paintMask, layerNames.ToArray());
+			Edit.Row(() => {
+				if (GUILayout.Button("Add selection"))
+				{
+					GameObject[] objects = Selection.gameObjects;
+					if (objects != null && objects.Length > 0)
+					{
+						foreach (var item in objects)
+						{
+							MeshFilter filter = item.GetComponent<MeshFilter>();
+							if (filter != null && !param.filters.Contains(filter))
+							{
+								param.filters.Add(filter);
+							}
+						}
+					}
+				}
+				if (GUILayout.Button("Remove Empty"))
+				{
+					for (int i = 0; i < param.filters.Count; i++)
+					{
+						if (param.filters[i] == null)
+						{
+							param.filters.RemoveAt(i);
+							i--;
+						}
+					}
+				}
+			});
+			
 			showList = Edit.List("Meshes", showList, param.filters.Count, (int i, int count) => {
 				if (param.filters.Count <= i) param.filters.Add(null);
 				if (count < param.filters.Count) param.filters.RemoveAt(param.filters.Count - 1);
@@ -369,7 +398,7 @@ namespace EditorSpace
         {
             Edit.Column(() =>
             {
-				DisplayRaycastType();
+				DisplayMeshesSelected();
 				
 
 				param.size = EditorGUILayout.FloatField("Size :", param.size);
@@ -907,5 +936,3 @@ namespace EditorSpace
 		#endregion
 	}
 }
-
-

@@ -15,13 +15,18 @@ namespace EditorSpace
 		public bool trueColor;
 		Vector2 textureOffset;
 		float permission;
+		bool inverseSpawning;
 
 		void SpawnerTab()
 		{
 			//DrawObjectRect();
 			//DrawTextureRect();
+			if (param.filters.Count > 0 && texture && GUILayout.Button("Spawn"))
+			{
+				Spawn();
+			}
 			EditorGUILayout.LabelField("Spawner");
-			DisplayRaycastType();
+			DisplayMeshesSelected();
 			texture = (Texture2D)EditorGUILayout.ObjectField("texture", texture, typeof(Texture2D), false);
 			if(texture)
 			{
@@ -46,6 +51,7 @@ namespace EditorSpace
 			visualisation = EditorGUILayout.Toggle("Visualisation", visualisation);
 			trueColor = EditorGUILayout.Toggle("TrueColor", trueColor);
 			param.worldPositionTexture = EditorGUILayout.Toggle("TextureOnWorld", param.worldPositionTexture);
+			inverseSpawning = EditorGUILayout.Toggle("Inversed Spawn", inverseSpawning);
 			float a = permission;
 			permission = EditorGUILayout.Slider("Tolérance", permission, 0,1);
 			if(a != permission)
@@ -53,11 +59,8 @@ namespace EditorSpace
 				EditorWindow.GetWindow<SceneView>().Repaint();
 			}
 
-			if (param.filters.Count > 0 && texture && GUILayout.Button("Spawn"))
-			{
-				Spawn();
-			}
 			
+			prefabListGUI();
 		}
 
 		void DrawingSceneSpawner()
@@ -76,7 +79,10 @@ namespace EditorSpace
 							
 							if (trueColor)
 								Handles.color = color;
-							else if (color.grayscale > permission)
+							bool check = color.grayscale > permission;
+							if (inverseSpawning) check = !check;
+
+							if (check)
 								Handles.color = Color.green;
 							else
 								Handles.color = Color.red;
@@ -119,8 +125,10 @@ namespace EditorSpace
 				{
 					LoopCases(filter, (Vector3 pos, Vector2Int index) => {
 						Color color = GetTextureColor(filter, index.x, index.y);
+						bool check = color.grayscale > permission;
+						if (inverseSpawning) check = !check;
 
-						if (color.grayscale > permission)
+						if (check)
 						{
 							if (param.randomPosition)
 							{
@@ -145,20 +153,25 @@ namespace EditorSpace
 
 		void LoopCases(MeshFilter filter, System.Action<Vector3, Vector2Int> action)
 		{
-			Vector3 size = new Vector3(filter.sharedMesh.bounds.size.x, filter.sharedMesh.bounds.size.y, filter.sharedMesh.bounds.size.z);
+			Vector3 size = new Vector3(filter.sharedMesh.bounds.size.x * filter.transform.localScale.x
+				, filter.sharedMesh.bounds.size.y * filter.transform.localScale.y
+				, filter.sharedMesh.bounds.size.z * filter.transform.localScale.z);
+
 			size /= scaling;
+
 			float xHalf = (size.x / 2);
 			float zHalf = (size.z / 2);
-			Vector3 objectScale = filter.transform.localScale / scaling;
+
 			for (int i = 0; i < size.x; i++)
 			{
 				for (int j = 0; j < size.z; j++)
 				{
 					// vec visu
-					Vector3 pos = new Vector3((i - xHalf) * objectScale.x
-						,size.y * objectScale.y
-						,(j - zHalf) * objectScale.z);
-					pos *= scaling * scaling;
+					Vector3 pos = new Vector3((i - xHalf) 
+						,size.y 
+						,(j - zHalf));
+
+					pos *= scaling ;
 					action.Invoke(pos, new Vector2Int(i, j));
 				}
 			}
