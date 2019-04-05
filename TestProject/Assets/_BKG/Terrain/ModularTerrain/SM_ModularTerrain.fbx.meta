@@ -1,0 +1,148 @@
+fileFormatVersion: 2
+guid: 0d1d60d0e123cdb42bcecc6078ce50ad
+timeCreated: 1524484880
+licenseType: Free
+ModelImporter:
+  serializedVersion: 22
+  fileIDToRecycleName:
+    100000: //RootNode
+    100002: TerrainHillLong
+    100004: TerrainHillRound
+    100006: Terrain_HillA
+    100008: Terrain_HillB
+    100010: Terrain_HillC
+    100012: Terrain_HillD
+    100014: Terrain_Hill128x128
+    100016: Terrain_Hill128x512
+    100018: Terrain_Hill256x256
+    100020: Terrain_Hill64x128
+    100022: Terrain_Plane64x64
+    400000: //RootNode
+    400002: TerrainHillLong
+    400004: TerrainHillRound
+    400006: Terrain_HillA
+    400008: Terrain_HillB
+    400010: Terrain_HillC
+    400012: Terrain_HillD
+    400014: Terrain_Hill128x128
+    400016: Terrain_Hill128x512
+    400018: Terrain_Hill256x256
+    400020: Terrain_Hill64x128
+    400022: Terrain_Plane64x64
+    2100000: No Name
+    2300000: //RootNode
+    2300002: TerrainHillLong
+    2300004: TerrainHillRound
+    2300006: Terrain_HillA
+    2300008: Terrain_HillB
+    2300010: Terrain_HillC
+    2300012: Terrain_HillD
+    2300014: Terrain_Hill128x128
+    2300016: Terrain_Hill128x512
+    2300018: Terrain_Hill256x256
+    2300020: Terrain_Hill64x128
+    2300022: Terrain_Plane64x64
+    3300000: //RootNode
+    3300002: TerrainHillLong
+    3300004: TerrainHillRound
+    3300006: Terrain_HillA
+    3300008: Terrain_HillB
+    3300010: Terrain_HillC
+    3300012: Terrain_HillD
+    3300014: Terrain_Hill128x128
+    3300016: Terrain_Hill128x512
+    3300018: Terrain_Hill256x256
+    3300020: Terrain_Hill64x128
+    3300022: Terrain_Plane64x64
+    4300000: TerrainHillA
+    4300002: TerrainHillLong
+    4300004: TerrainHillRound
+    4300006: Terrain_HillD
+    4300008: Terrain_HillC
+    4300010: Terrain_HillB
+    4300012: Terrain_HillA
+    4300014: Terrain_Hill256x256
+    4300016: Terrain_Hill128x512
+    4300018: Terrain_Hill64x128
+    4300020: Terrain_Hill128x128
+    4300022: Terrain_Plane64x64
+  externalObjects: {}
+  materials:
+    importMaterials: 0
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 0
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    swapUVChannels: 0
+    generateSecondaryUV: 1
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 0
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

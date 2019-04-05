@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: f4f1a960b5f17ef4facd06602c1683a5
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _SplatMap: {fileID: 2800000, guid: 75c401d9b4283304597c0858003ae346, type: 3}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
