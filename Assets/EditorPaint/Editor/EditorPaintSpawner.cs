@@ -16,6 +16,7 @@ namespace EditorSpace
 		Vector2 textureOffset;
 		float permission;
 		bool inverseSpawning;
+		bool inverseZY ;
 
 		void SpawnerTab()
 		{
@@ -52,6 +53,7 @@ namespace EditorSpace
 			trueColor = EditorGUILayout.Toggle("TrueColor", trueColor);
 			param.worldPositionTexture = EditorGUILayout.Toggle("TextureOnWorld", param.worldPositionTexture);
 			inverseSpawning = EditorGUILayout.Toggle("Inversed Spawn", inverseSpawning);
+			inverseZY = EditorGUILayout.Toggle("Inversed X & Y", inverseZY);
 			float a = permission;
 			permission = EditorGUILayout.Slider("Tolérance", permission, 0,1);
 			if(a != permission)
@@ -62,36 +64,43 @@ namespace EditorSpace
 			
 			prefabListGUI();
 		}
-
+		
 		void DrawingSceneSpawner()
 		{
 			if (visualisation && param.filters.Count > 0)
 			{
 				Color color = Color.gray;
-				foreach (var filter in param.filters)
+				MeshFilter filter;
+				for (int i = 0; i < param.filters.Count ; i++)
 				{
-					if(filter)
+					filter = param.filters[i];
+					if (filter)
 					{
 						LoopCases(filter, (Vector3 pos, Vector2Int index) => {
 							
 							color = GetTextureColor(filter, index.x, index.y);
 								
-							
-							if (trueColor)
-								Handles.color = color;
 							bool check = color.grayscale > permission;
 							if (inverseSpawning) check = !check;
 
-							if (check)
+							if (trueColor)
+								Handles.color = color;
+							else if (check)
 								Handles.color = Color.green;
 							else
 								Handles.color = Color.red;
 							//pos *= scaling;
+							//ApplyShaderToTerrain(filter, pos + filter.transform.position, scaling);
 							Handles.CubeCap(4, pos + filter.transform.position, Quaternion.identity, scaling);
 						});
 					}
 				}
 			}
+		}
+
+		void ApplyShaderToTerrain(MeshFilter filter, Vector3 pos, float size)
+		{
+
 		}
 
 		Color GetTextureColor(MeshFilter filter, int x, int z)
@@ -140,8 +149,10 @@ namespace EditorSpace
 							if (obj)
 							{
 								obj.transform.up = Vector3.up;
-								if (param.rndRotationY)
-									obj.transform.Rotate(Vector3.up, Random.Range(0f, 90f));
+
+								obj.transform.Rotate(Vector3.right, Random.Range(0, param.rotationOffset.x));
+								obj.transform.Rotate(Vector3.up, Random.Range(0, param.rotationOffset.y));
+								obj.transform.Rotate(Vector3.forward, Random.Range(0, param.rotationOffset.z));
 
 								spawned.Add(obj);
 							}
@@ -150,6 +161,7 @@ namespace EditorSpace
 				}
 			}
 		}
+		
 
 		void LoopCases(MeshFilter filter, System.Action<Vector3, Vector2Int> action)
 		{
@@ -157,25 +169,33 @@ namespace EditorSpace
 				, filter.sharedMesh.bounds.size.y * filter.transform.localScale.y
 				, filter.sharedMesh.bounds.size.z * filter.transform.localScale.z);
 
+			if(inverseZY)
+			{
+				float y = size.y;
+				size.y = size.z;
+				size.z = y;
+			}
+
 			size /= scaling;
 
-			float xHalf = (size.x / 2);
-			float zHalf = (size.z / 2);
+			float width = (size.x / 2);
+			float length = (size.z / 2);
+			Vector3 pos;
 
 			for (int i = 0; i < size.x; i++)
 			{
 				for (int j = 0; j < size.z; j++)
 				{
-					// vec visu
-					Vector3 pos = new Vector3((i - xHalf) 
+					pos = new Vector3((i - width) 
 						,size.y 
-						,(j - zHalf));
+						,(j - length));
 
 					pos *= scaling ;
 					action.Invoke(pos, new Vector2Int(i, j));
 				}
 			}
 		}
+
 
 		void Reset()
 		{

@@ -19,7 +19,6 @@ namespace EditorSpace
         Auto = 1,
         Forced = 2,
         Snap = 3,
-        SnapToMesh = 4,
     }
 
     [System.Serializable]
@@ -34,12 +33,12 @@ namespace EditorSpace
         public float size = 2;
         [SerializeField]
         public int density = 2;
-        [SerializeField]
-        public bool rndRotationX = false;
-        [SerializeField]
-        public bool rndRotationY = false;
-        [SerializeField]
-        public bool rndRotationZ = false;
+        //[SerializeField]
+        //public bool rndRotationX = false;
+        //[SerializeField]
+        //public bool rndRotationY = false;
+        //[SerializeField]
+        //public bool rndRotationZ = false;
         [SerializeField]
         public bool proximityCheck = false;
         [SerializeField]
@@ -64,6 +63,12 @@ namespace EditorSpace
         public bool randomPosition = true;
         [SerializeField]
         public bool worldPositionTexture = false;
+        [SerializeField]
+        public bool snapModeColliderSpawn = false;
+        [SerializeField]
+        public bool spawnWithNormalRotation = false;
+        [SerializeField]
+        public float spawnWithNormalInfluence = 0;
 
         public static void Save(PaintParam param, string path)
         {
@@ -177,7 +182,7 @@ namespace EditorSpace
             SERIALIZED_PATH = Application.persistentDataPath;
             param = new PaintParam();
             PaintParam.Load(param, SERIALIZED_PATH);
-            SceneView.duringSceneGui += SceneGUI;
+            SceneView.onSceneGUIDelegate += SceneGUI;
             if (param.objects == null)
                 param.objects = new List<PaintObject>();
             layerNames = new List<string>();
@@ -187,12 +192,14 @@ namespace EditorSpace
                 layerNames.Add(LayerMask.LayerToName(i));
                 count++;
             }
+
+
         }
 
         void OnDisable()
         {
             PaintParam.Save(param, SERIALIZED_PATH);
-            SceneView.duringSceneGui -= SceneGUI;
+            SceneView.onSceneGUIDelegate -= SceneGUI;
             if (paintPosition) DestroyImmediate(paintPosition.gameObject);
         }
         #endregion
@@ -228,7 +235,7 @@ namespace EditorSpace
         {
             Edit.Row(() =>
             {
-                windowsTab = GUILayout.SelectionGrid(windowsTab, new string[] { "Paint", "Spawning [WIP]", "Settings" }, 3, EditorStyles.toolbarButton);
+                windowsTab = GUILayout.SelectionGrid(windowsTab, new string[] { "Paint", "[WIP] Spawning", "Settings" }, 3, EditorStyles.toolbarButton);
                 if (GUILayout.Button("Exit", EditorStyles.toolbarButton, GUILayout.Width(50)))
                 {
                     this.Close();
@@ -389,33 +396,75 @@ namespace EditorSpace
                     }
                 }
             });
-
+            bool noCollider = false;
             showList = Edit.List("Meshes", showList, param.filters.Count, (int i, int count) =>
             {
                 if (param.filters.Count <= i) param.filters.Add(null);
                 if (count < param.filters.Count) param.filters.RemoveAt(param.filters.Count - 1);
                 param.filters[i] = (MeshFilter)EditorGUILayout.ObjectField("", param.filters[i], typeof(MeshFilter), true);
+                if (!noCollider && param.filters[i] != null) noCollider = param.filters[i].gameObject.GetComponent<Collider>() == null;
             });
+            if (noCollider)
+            {
+                Edit.Row(() =>
+                {
+                    EditorGUILayout.LabelField("No Collider found on one mesh");
+                    if (GUILayout.Button("Add Collider"))
+                    {
+                        foreach (var filter in param.filters)
+                        {
+                            if (filter && filter.gameObject.GetComponent<Collider>() == null)
+                            {
+                                MeshCollider collider = filter.gameObject.AddComponent<MeshCollider>();
+                                collider.sharedMesh = filter.sharedMesh;
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         void paintTab()
         {
             Edit.Column(() =>
             {
-                DisplayMeshesSelected();
+                param.paintMask = EditorGUILayout.MaskField(new GUIContent("Paint Layer", "on which layer the tool will paint"), param.paintMask, layerNames.ToArray());
+
+                //DisplayMeshesSelected();
 
 
                 param.size = EditorGUILayout.FloatField("Size :", param.size);
-                param.density = EditorGUILayout.IntField("Density :", param.density);
-                param.randomPosition = GUILayout.Toggle(param.randomPosition, "Random Position");
-                Edit.Row(() =>
+                param.density = EditorGUILayout.IntField(new GUIContent("Density: ", "Object spawned by click"), param.density);
+                param.randomPosition = EditorGUILayout.Toggle(new GUIContent("Random Position: ", "Randomize the spawn position (scale with Size)"), param.randomPosition);
+                param.spawnWithNormalRotation = EditorGUILayout.Toggle(new GUIContent("Normal Rotation:", "Use the normal of the ground to rotate the object"), param.spawnWithNormalRotation);
+                if (param.spawnWithNormalRotation)
                 {
-                    GUILayout.Label("Random Rotation :");
-                    param.rndRotationX = GUILayout.Toggle(param.rndRotationX, "X");
-                    param.rndRotationY = GUILayout.Toggle(param.rndRotationY, "Y");
-                    param.rndRotationZ = GUILayout.Toggle(param.rndRotationZ, "Z");
-                });
-                param.rotationOffset = EditorGUILayout.Vector3Field("Rotation Offset", param.rotationOffset);
+                    Edit.Column(() =>
+                    {
+                        EditorGUILayout.LabelField("Normal influence on object");
+                        param.spawnWithNormalInfluence = EditorGUILayout.Slider(param.spawnWithNormalInfluence, 0, 1);
+                        Edit.Row(() =>
+                        {
+                            EditorGUILayout.LabelField("Up");
+                            GUILayout.FlexibleSpace();
+                            GUILayout.Label("Normal");
+                        });
+
+                    }, "Box");
+                }
+
+
+                //Edit.Row(() =>
+                //{
+                //    GUILayout.Label("Random Rotation :");
+                //    param.rndRotationX = GUILayout.Toggle(param.rndRotationX, "X");
+                //    param.rndRotationY = GUILayout.Toggle(param.rndRotationY, "Y");
+                //    param.rndRotationZ = GUILayout.Toggle(param.rndRotationZ, "Z");
+                //});
+
+
+
+                param.rotationOffset = EditorGUILayout.Vector3Field("Random Rotation", param.rotationOffset);
                 Edit.Row(() =>
                 {
                     param.proximityCheck = EditorGUILayout.Toggle("Proximity Check ", param.proximityCheck);
@@ -441,13 +490,8 @@ namespace EditorSpace
                 {
                     Edit.Column(() =>
                     {
-                        param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
-                    });
-                }
-                else if (param.mode == PaintMode.SnapToMesh)
-                {
-                    Edit.Column(() =>
-                    {
+                        param.snapModeColliderSpawn = EditorGUILayout.Toggle(new GUIContent("CheckObjectCollider", "Try to spawn the object using its collider"), param.snapModeColliderSpawn);
+
                         param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
                     });
                 }
@@ -540,7 +584,6 @@ namespace EditorSpace
                 if (paintPosition == null)
                 {
                     paintPosition = new GameObject(TEMPORARY_OBJECT_NAME).transform;
-                    paintPosition.gameObject.AddComponent<EditorSceneGizmo>();
                 }
 
 
@@ -813,13 +856,14 @@ namespace EditorSpace
                 go = (GameObject)PrefabUtility.InstantiatePrefab(prefabObj);
                 go.name = param.spawnedPrefix + go.name;
 
-
-                if (paintPosition)
+                if (!param.spawnWithNormalRotation)
+                {
+                    go.transform.up = Vector3.up;
+                }
+                else if (paintPosition)
                 {
                     go.transform.rotation = paintPosition.rotation;
-                    go.transform.up = paintPosition.up;
-                    if (param.rotationOffset != Vector3.zero)
-                        go.transform.Rotate(param.rotationOffset);
+                    go.transform.up = Vector3.Lerp(Vector3.up, paintPosition.up, param.spawnWithNormalInfluence);
                 }
                 else
                 {
@@ -827,9 +871,9 @@ namespace EditorSpace
                 }
 
                 //RND Rotation
-                if (param.rndRotationX) go.transform.Rotate(Vector3.right, Random.Range(0, 360));
-                if (param.rndRotationY) go.transform.Rotate(Vector3.up, Random.Range(0, 360));
-                if (param.rndRotationZ) go.transform.Rotate(Vector3.forward, Random.Range(0, 360));
+                go.transform.Rotate(Vector3.right, Random.Range(0, param.rotationOffset.x));
+                go.transform.Rotate(Vector3.up, Random.Range(0, param.rotationOffset.y));
+                go.transform.Rotate(Vector3.forward, Random.Range(0, param.rotationOffset.z));
 
                 Vector2 scale = param.objects[rndIndex].scale;
                 if (scale != Vector2.one && scale != Vector2.zero)
@@ -843,11 +887,8 @@ namespace EditorSpace
                 }
                 else if (param.mode == PaintMode.Snap)
                 {
-                    PhysicRaycast(go, rndIndex);
-                }
-                else if (param.mode == PaintMode.Snap)
-                {
-                    PhysicRaycast(go, rndIndex);
+                    go.transform.position = pos;
+                    PhysicRaycast(go);
                 }
                 else
                 {
@@ -889,32 +930,36 @@ namespace EditorSpace
             return mask == (mask | (1 << layer));
         }
 
-        void PhysicRaycast(GameObject obj, int index)
+        void PhysicRaycast(GameObject obj)
         {
-            Vector3 position = obj.transform.position + obj.transform.up * param.maxYPosition;
-            obj.transform.position = position;
+            Vector3 lPos = obj.transform.position + obj.transform.up * param.maxYPosition;
+            obj.transform.position = lPos;
             obj.SetActive(false);
             RaycastHit groundHit;
-            Ray ray = new Ray(position, -obj.transform.up);
-            if (Raycaster(ray, out groundHit))
+            Ray ray = new Ray(lPos, -obj.transform.up);
+            if (Physics.Raycast(ray, out groundHit))
             {
-                Debug.Log("Object found");
                 RaycastHit objectHit;
                 if (LayerContain(param.paintMask, groundHit.collider.gameObject.layer))
                 {
-                    Debug.Log("Good layer");
                     obj.SetActive(true);
                     Ray ray2 = new Ray(groundHit.point, obj.transform.up);
-                    if (Raycaster(ray2, out objectHit) && obj.layer == objectHit.collider.gameObject.layer)
+                    if (param.snapModeColliderSpawn)
                     {
-                        Debug.Log("Back ray found object");
-                        Vector3 newPos;
-                        float differencialDistance = Vector3.Distance(objectHit.point, obj.transform.position);
-                        newPos = groundHit.point + (obj.transform.up * differencialDistance);
-                        obj.transform.position = newPos;
+                        if (Raycaster(ray2, out objectHit) && obj.layer == objectHit.collider.gameObject.layer)
+                        {
+                            Vector3 newPos;
+                            float differencialDistance = Vector3.Distance(objectHit.point, obj.transform.position);
+                            newPos = groundHit.point + (obj.transform.up * differencialDistance);
+                            obj.transform.position = newPos;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        obj.transform.position = groundHit.point;
                         return;
                     }
-                    //Debug.Log(obj.name+" "+objectHit.collider.name);
                 }
             }
 
