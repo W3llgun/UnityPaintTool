@@ -21,6 +21,13 @@ namespace EditorSpace
         Snap = 3,
     }
 
+    public enum EraseMode
+    {
+        Memory = 1,
+        ChildOf = 2,
+        Collide = 3,
+    }
+
     [System.Serializable]
     public class PaintParam
     {
@@ -46,13 +53,15 @@ namespace EditorSpace
         [SerializeField]
         public float maxYPosition = 10;
         [SerializeField]
-        public PaintMode mode = PaintMode.Auto;
+        public PaintMode paintMode = PaintMode.Auto;
         [SerializeField]
         public float heightForced = 0;
         [SerializeField]
         public int listSize = 0;
         [SerializeField]
         public LayerMask paintMask = 1;
+        [SerializeField]
+        public LayerMask eraseMask = 1;
         [SerializeField]
         public bool addPrefabNameToGroup = true, gizmoCircle = true, gizmoHeight, gizmoSize = true, gizmoDensity = true, gizmoLayer, gizmoName, gizmoPosition, gizmoNormal, editorPrefabVisual = true;
         [SerializeField]
@@ -69,6 +78,8 @@ namespace EditorSpace
         public bool spawnWithNormalRotation = false;
         [SerializeField]
         public float spawnWithNormalInfluence = 0;
+        [SerializeField]
+        public EraseMode eraseMode = EraseMode.Memory;
 
         public static void Save(PaintParam param, string path)
         {
@@ -164,7 +175,7 @@ namespace EditorSpace
         Event currentEvent;
         RaycastHit mouseHitPoint;
         List<string> layerNames;
-
+        SceneView currentSceneView;
         #endregion
 
         #region Unity
@@ -182,7 +193,7 @@ namespace EditorSpace
             SERIALIZED_PATH = Application.persistentDataPath;
             param = new PaintParam();
             PaintParam.Load(param, SERIALIZED_PATH);
-            SceneView.onSceneGUIDelegate += SceneGUI;
+            SceneView.duringSceneGui += SceneGUI;
             if (param.objects == null)
                 param.objects = new List<PaintObject>();
             layerNames = new List<string>();
@@ -199,7 +210,7 @@ namespace EditorSpace
         void OnDisable()
         {
             PaintParam.Save(param, SERIALIZED_PATH);
-            SceneView.onSceneGUIDelegate -= SceneGUI;
+            SceneView.duringSceneGui -= SceneGUI;
             if (paintPosition) DestroyImmediate(paintPosition.gameObject);
         }
         #endregion
@@ -233,6 +244,16 @@ namespace EditorSpace
         #region EditorGUI
         void OnGUI()
         {
+            if (Event.current.alt && Event.current.control)
+            {
+                Debug.Log("A");
+                if (currentSceneView)
+                {
+                    currentSceneView.Focus();
+                    Debug.Log("B");
+                }
+            }
+
             Edit.Row(() =>
             {
                 windowsTab = GUILayout.SelectionGrid(windowsTab, new string[] { "Paint", "[WIP] Spawning", "Settings" }, 3, EditorStyles.toolbarButton);
@@ -314,6 +335,7 @@ namespace EditorSpace
                  EditorGUILayout.LabelField("ctrl + scroll : Change Size");
                  EditorGUILayout.LabelField("alt + scroll : Change Density");
                  EditorGUILayout.LabelField("ctrl + alt + Z : Cancel Paint");
+                 EditorGUILayout.LabelField("ctrl + alt + E : Erase objects around mouse");
                  EditorGUILayout.LabelField("ctrl + alt + Click : Current height as Forced height");
              }, "Box");
             toggleGroupGizmo = Edit.ToggleGroup(toggleGroupGizmo, "Gizmo", 1, () =>
@@ -360,9 +382,30 @@ namespace EditorSpace
                     }
                 });
             }, "Box");
+            toggleGroupKeys = Edit.ToggleGroup(toggleGroupKeys, "PaintCurrentMemory", 1, () =>
+             {
+                 GUILayout.BeginScrollView(scrollMemory);
+                 EditorGUILayout.LabelField("Display current temporary memory");
+                 if (memory != null)
+                 {
+                     int count = 0;
+                     foreach (var group in memory)
+                     {
+                         count++;
+                         EditorGUILayout.LabelField("Group" + count);
+                         foreach (var obj in group)
+                         {
+                             EditorGUILayout.ObjectField(obj, typeof(GameObject), true);
+                         }
+                     }
 
+                 }
+
+                 GUILayout.EndScrollView();
+             }, "Box");
         }
         bool showList;
+        Vector2 scrollMemory;
 
         void DisplayMeshesSelected()
         {
@@ -470,31 +513,62 @@ namespace EditorSpace
                     param.proximityCheck = EditorGUILayout.Toggle("Proximity Check ", param.proximityCheck);
                     if (param.proximityCheck) param.proximityDistance = EditorGUILayout.Slider(param.proximityDistance, 0.1f, param.size);
                 });
-                Edit.Row(() =>
-                {
-                    EditorGUILayout.LabelField("Mode");
-                    if (GUILayout.Toggle(param.mode == PaintMode.Auto, "Default", EditorStyles.miniButtonLeft, GUILayout.MaxWidth(100))) param.mode = PaintMode.Auto;
-                    if (GUILayout.Toggle(param.mode == PaintMode.Forced, "Y-Forced", EditorStyles.miniButtonMid, GUILayout.MaxWidth(100))) param.mode = PaintMode.Forced;
-                    if (GUILayout.Toggle(param.mode == PaintMode.Snap, "Snap", EditorStyles.miniButtonRight, GUILayout.MaxWidth(100))) param.mode = PaintMode.Snap;
-                    GUILayout.FlexibleSpace();
-                });
-                if (param.mode == PaintMode.Auto)
-                {
-                    EditorGUILayout.LabelField("Use the mouse position");
-                }
-                else if (param.mode == PaintMode.Forced)
-                {
-                    param.heightForced = EditorGUILayout.FloatField("Forced height :", param.heightForced);
-                }
-                else if (param.mode == PaintMode.Snap)
-                {
-                    Edit.Column(() =>
-                    {
-                        param.snapModeColliderSpawn = EditorGUILayout.Toggle(new GUIContent("CheckObjectCollider", "Try to spawn the object using its collider"), param.snapModeColliderSpawn);
 
-                        param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
+                Edit.Column(() =>
+                {
+                    Edit.Row(() =>
+                    {
+                        EditorGUILayout.LabelField("Paint Mode");
+                        if (GUILayout.Toggle(param.paintMode == PaintMode.Auto, "Default", EditorStyles.miniButtonLeft, GUILayout.MaxWidth(100))) param.paintMode = PaintMode.Auto;
+                        if (GUILayout.Toggle(param.paintMode == PaintMode.Forced, "Y-Forced", EditorStyles.miniButtonMid, GUILayout.MaxWidth(100))) param.paintMode = PaintMode.Forced;
+                        if (GUILayout.Toggle(param.paintMode == PaintMode.Snap, "Snap", EditorStyles.miniButtonRight, GUILayout.MaxWidth(100))) param.paintMode = PaintMode.Snap;
+                        GUILayout.FlexibleSpace();
                     });
-                }
+                    if (param.paintMode == PaintMode.Auto)
+                    {
+                        EditorGUILayout.LabelField("Use the mouse position");
+                    }
+                    else if (param.paintMode == PaintMode.Forced)
+                    {
+                        param.heightForced = EditorGUILayout.FloatField("Forced height :", param.heightForced);
+                    }
+                    else if (param.paintMode == PaintMode.Snap)
+                    {
+                        Edit.Column(() =>
+                        {
+                            param.snapModeColliderSpawn = EditorGUILayout.Toggle(new GUIContent("CheckObjectCollider", "Try to spawn the object using its collider"), param.snapModeColliderSpawn);
+
+                            param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
+                        });
+                    }
+                }, "Box");
+                Edit.Column(() =>
+                {
+
+
+                    Edit.Row(() =>
+                    {
+                        EditorGUILayout.LabelField("Erase Mode");
+                        if (GUILayout.Toggle(param.eraseMode == EraseMode.Memory, "LocalMemory", EditorStyles.miniButtonLeft, GUILayout.MaxWidth(100))) param.eraseMode = EraseMode.Memory;
+                        if (GUILayout.Toggle(param.eraseMode == EraseMode.ChildOf, "ChildOf", EditorStyles.miniButtonMid, GUILayout.MaxWidth(100))) param.eraseMode = EraseMode.ChildOf;
+                        if (GUILayout.Toggle(param.eraseMode == EraseMode.Collide, "Collider Overlap", EditorStyles.miniButtonRight, GUILayout.MaxWidth(100))) param.eraseMode = EraseMode.Collide;
+                        GUILayout.FlexibleSpace();
+                    });
+                    if (param.eraseMode == EraseMode.Memory)
+                    {
+                        EditorGUILayout.LabelField("Erase only objects painted during current session");
+                    }
+                    else if (param.eraseMode == EraseMode.ChildOf)
+                    {
+                        EditorGUILayout.LabelField("Erase only objects child of selected gameobject");
+                    }
+                    else if (param.eraseMode == EraseMode.Collide)
+                    {
+                        EditorGUILayout.LabelField("Erase objects around mouse that collide using Physics sphere overlap");
+                        param.eraseMask = EditorGUILayout.MaskField(new GUIContent("Erase Layer", "on which layer the tool will paint"), param.eraseMask, layerNames.ToArray());
+
+                    }
+                }, "Box");
             }, "Box");
         }
 
@@ -557,6 +631,7 @@ namespace EditorSpace
         /// </summary>
         void SceneGUI(SceneView sceneView)
         {
+            if (currentSceneView == null) currentSceneView = sceneView;
             currentEvent = Event.current;
             updateMousePos(sceneView);
             drawGizmo();
@@ -589,7 +664,7 @@ namespace EditorSpace
 
                 paintPosition.rotation = mouseHitPoint.transform.rotation;
                 paintPosition.forward = mouseHitPoint.normal;
-                if (param.mode == PaintMode.Forced) pos.y = param.heightForced;
+                if (param.paintMode == PaintMode.Forced) pos.y = param.heightForced;
                 if (param.gizmoNormal) Handles.ArrowCap(3, mouseHitPoint.point, paintPosition.rotation, gizmoNormalLenght);
                 if (param.gizmoCircle) Handles.CircleCap(2, currentMousePos, paintPosition.rotation, param.size);
                 paintPosition.up = mouseHitPoint.normal;
@@ -608,7 +683,7 @@ namespace EditorSpace
             if (param.gizmoName) GUILayout.TextField("Name " + (mouseHitPoint.collider ? mouseHitPoint.collider.name : "none"), style);
             if (param.gizmoPosition) GUILayout.TextField("Position " + currentMousePos.ToString(), style);
 
-            if (param.mode == PaintMode.Forced)
+            if (param.paintMode == PaintMode.Forced)
                 GUILayout.TextField("Force-Height " + param.heightForced, style);
             GUILayout.EndArea();
 
@@ -683,7 +758,7 @@ namespace EditorSpace
             }
             else if (currentEvent.control && currentEvent.alt && (currentEvent.button == 0 && currentEvent.type == EventType.MouseDown))
             {
-                param.mode = PaintMode.Forced;
+                param.paintMode = PaintMode.Forced;
                 param.heightForced = currentMousePos.y;
                 this.Repaint();
             }
@@ -707,6 +782,92 @@ namespace EditorSpace
             else if (currentEvent.alt && currentEvent.control && currentEvent.keyCode == KeyCode.Z && currentEvent.type == EventType.KeyDown)
             {
                 Cancel();
+            }
+            else if (currentEvent.alt && currentEvent.control && currentEvent.keyCode == KeyCode.E && currentEvent.type == EventType.KeyDown)
+            {
+                switch (param.eraseMode)
+                {
+                    case EraseMode.Memory:
+                        RemoveUsingMemory();
+                        break;
+                    case EraseMode.ChildOf:
+                        RemoveChildOf();
+                        break;
+                    case EraseMode.Collide:
+                        RemoveUsingCollider();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+
+        void RemoveUsingCollider()
+        {
+            Collider[] colliders = Physics.OverlapSphere(currentMousePos, param.size, param.eraseMask);
+            foreach (var collider in colliders)
+            {
+                DestroyImmediate(collider.gameObject);
+            }
+        }
+
+        void RemoveChildOf()
+        {
+            GameObject[] parents = Selection.gameObjects;
+            Transform obj;
+            List<Transform> toRemove = new List<Transform>();
+
+            for (int i = 0; i < parents.Length; i++)
+            {
+                GameObject parent = parents[i];
+
+                if (parent != null)
+                {
+                    for (int j = 0; j < parent.transform.childCount; j++)
+                    {
+                        obj = parent.transform.GetChild(j);
+                        if (obj && Vector3.Distance(obj.position, currentMousePos) < param.size)
+                        {
+                            toRemove.Add(obj);
+
+                        }
+                    }
+                }
+            }
+
+            foreach (var item in toRemove)
+            {
+                DestroyImmediate(item.gameObject);
+            }
+        }
+
+
+        void RemoveUsingMemory()
+        {
+            //currentMousePos
+            //param.size
+            for (int j = 0; j < memory.Count; j++)
+            {
+                List<GameObject> group = memory[j];
+                for (int i = 0; i < group.Count; i++)
+                {
+                    GameObject obj = group[i];
+
+                    if (obj && Vector3.Distance(obj.transform.position, currentMousePos) < param.size)
+                    {
+                        DestroyImmediate(obj);
+                        group.RemoveAt(i); // Remove the list
+                        i--;
+                    }
+                }
+
+                if (group == null || group.Count == 0)
+                {
+                    group = null;
+                    memory.RemoveAt(j);
+                    j--;
+                }
             }
         }
 
@@ -881,11 +1042,11 @@ namespace EditorSpace
                     go.transform.localScale *= Random.Range(scale.x, scale.y);
                 }
 
-                if (param.mode == PaintMode.Forced)
+                if (param.paintMode == PaintMode.Forced)
                 {
                     go.transform.position = new Vector3(pos.x, param.heightForced, pos.z);
                 }
-                else if (param.mode == PaintMode.Snap)
+                else if (param.paintMode == PaintMode.Snap)
                 {
                     go.transform.position = pos;
                     PhysicRaycast(go);
