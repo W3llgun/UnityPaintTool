@@ -13,24 +13,24 @@ namespace EditorSpace
      *          
      *  BUG:    - Multiple object always spawn with the same snap rotation as the first one (snap mode)
      */
-	 
+
     public enum PaintMode
     {
         Auto = 1,
         Forced = 2,
         Snap = 3,
-		SnapToMesh = 4,
-	}
+        SnapToMesh = 4,
+    }
 
     [System.Serializable]
     public class PaintParam
     {
         const string SERIALIZED_NAME = "PaintToolParam";
-		[SerializeField]
-		public string spawnedPrefix = "";
-		[SerializeField]
-		public List<MeshFilter> filters = new List<MeshFilter>();
-		[SerializeField]
+        [SerializeField]
+        public string spawnedPrefix = "";
+        [SerializeField]
+        public List<MeshFilter> filters = new List<MeshFilter>();
+        [SerializeField]
         public float size = 2;
         [SerializeField]
         public int density = 2;
@@ -58,14 +58,14 @@ namespace EditorSpace
         public bool addPrefabNameToGroup = true, gizmoCircle = true, gizmoHeight, gizmoSize = true, gizmoDensity = true, gizmoLayer, gizmoName, gizmoPosition, gizmoNormal, editorPrefabVisual = true;
         [SerializeField]
         public List<PaintObject> objects;
-		[SerializeField]
-		public Vector3 rotationOffset;
-		[SerializeField]
-		public bool randomPosition = true;
-		[SerializeField]
-		public bool worldPositionTexture = false;
+        [SerializeField]
+        public Vector3 rotationOffset;
+        [SerializeField]
+        public bool randomPosition = true;
+        [SerializeField]
+        public bool worldPositionTexture = false;
 
-		public static void Save(PaintParam param, string path)
+        public static void Save(PaintParam param, string path)
         {
             string filePath = Path.Combine(path, SERIALIZED_NAME);
             if (File.Exists(filePath)) File.Delete(filePath);
@@ -85,7 +85,7 @@ namespace EditorSpace
     [System.Serializable]
     public class PaintObject
     {
-        
+
         [SerializeField]
         public GameObject prefab = null;
         [SerializeField]
@@ -108,9 +108,9 @@ namespace EditorSpace
                         Edit.Indent(() =>
                         {
                             if (displayVisual) GUILayout.Label(AssetPreview.GetAssetPreview(obj.prefab));
-                            Edit.Column(() => 
+                            Edit.Column(() =>
                             {
-                                obj.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab",obj.prefab, typeof(GameObject), true);
+                                obj.prefab = (GameObject)EditorGUILayout.ObjectField("Prefab", obj.prefab, typeof(GameObject), true);
                                 if (obj.prefab != null)
                                 {
                                     if (obj.customName.Length == 0 && obj.prefab) obj.customName = obj.prefab.name;
@@ -140,7 +140,7 @@ namespace EditorSpace
         // Displayed Variables
         [SerializeField]
         public PaintParam param;
-        
+
         // Private
         Vector3 currentMousePos = Vector3.zero;
         Vector3 lastPaintPos = Vector3.zero;
@@ -154,12 +154,12 @@ namespace EditorSpace
         bool isPainting = false;
         int paintNumber = 0;
         int windowsTab = 0;
-		
-		float gizmoNormalLenght = 1;
-		Event currentEvent;
+
+        float gizmoNormalLenght = 1;
+        Event currentEvent;
         RaycastHit mouseHitPoint;
         List<string> layerNames;
-        
+
         #endregion
 
         #region Unity
@@ -177,12 +177,12 @@ namespace EditorSpace
             SERIALIZED_PATH = Application.persistentDataPath;
             param = new PaintParam();
             PaintParam.Load(param, SERIALIZED_PATH);
-            SceneView.onSceneGUIDelegate += SceneGUI;
+            SceneView.duringSceneGui += SceneGUI;
             if (param.objects == null)
                 param.objects = new List<PaintObject>();
             layerNames = new List<string>();
             int count = 0;
-            for(int i =0; i <= 31; i++)
+            for (int i = 0; i <= 31; i++)
             {
                 layerNames.Add(LayerMask.LayerToName(i));
                 count++;
@@ -192,8 +192,8 @@ namespace EditorSpace
         void OnDisable()
         {
             PaintParam.Save(param, SERIALIZED_PATH);
-            SceneView.onSceneGUIDelegate -= SceneGUI;
-            if(paintPosition) DestroyImmediate(paintPosition.gameObject);
+            SceneView.duringSceneGui -= SceneGUI;
+            if (paintPosition) DestroyImmediate(paintPosition.gameObject);
         }
         #endregion
 
@@ -222,40 +222,42 @@ namespace EditorSpace
         }
 
         #endregion
-        
+
         #region EditorGUI
         void OnGUI()
         {
-            Edit.Row(() => {
-                windowsTab = GUILayout.SelectionGrid(windowsTab, new string[] { "Spawning","Paint", "Setting" }, 3, EditorStyles.toolbarButton);
-                if(GUILayout.Button("Exit", EditorStyles.toolbarButton, GUILayout.Width(50)))
+            Edit.Row(() =>
+            {
+                windowsTab = GUILayout.SelectionGrid(windowsTab, new string[] { "Paint", "Spawning [WIP]", "Settings" }, 3, EditorStyles.toolbarButton);
+                if (GUILayout.Button("Exit", EditorStyles.toolbarButton, GUILayout.Width(50)))
                 {
                     this.Close();
                 }
             });
-            Edit.View(ref scrollView, () => {
-                
+            Edit.View(ref scrollView, () =>
+            {
+
                 if (windowsTab == 2)
                 {
                     optionTab();
                 }
-                else if (windowsTab == 1)
+                else if (windowsTab == 0)
                 {
-					//dropArea(new Rect(0, 0, this.position.width, this.position.height));
-					float tempSize = param.size;
+                    //dropArea(new Rect(0, 0, this.position.width, this.position.height));
+                    float tempSize = param.size;
                     int tempDensity = param.density;
                     paintTab();
                     prefabListGUI();
                     datacheck(tempSize, tempDensity);
                 }
-				else
-				{
-					SpawnerTab();
-				}
+                else
+                {
+                    SpawnerTab();
+                }
             });
         }
-		
-		
+
+
 
         void dropArea(Rect rct)
         {
@@ -280,11 +282,11 @@ namespace EditorSpace
 
         void objectToList(GameObject obj)
         {
-            if(obj)
+            if (obj)
             {
                 foreach (var paintObj in param.objects)
                 {
-                    if(paintObj.prefab == null)
+                    if (paintObj.prefab == null)
                     {
                         paintObj.prefab = obj;
                         return;
@@ -299,38 +301,38 @@ namespace EditorSpace
 
         void optionTab()
         {
-            toggleGroupKeys = Edit.ToggleGroup(toggleGroupKeys, "hotKey", 1,() =>
-            {
-                EditorGUILayout.LabelField("ctrl + click : Paint");
-                EditorGUILayout.LabelField("ctrl + scroll : Change Size");
-                EditorGUILayout.LabelField("alt + scroll : Change Density");
-                EditorGUILayout.LabelField("ctrl + alt + Z : Cancel Paint");
-                EditorGUILayout.LabelField("ctrl + alt + Click : Current height as Forced height");
-            }, "Box");
-            toggleGroupGizmo = Edit.ToggleGroup(toggleGroupGizmo, "Gizmo", 1,() =>
-            {
-                enableSceneGizmo = EditorGUILayout.Toggle(new GUIContent("Display Gizmo", "Display the scene UI"), enableSceneGizmo);
-                if (enableSceneGizmo)
-                {
-                    EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+            toggleGroupKeys = Edit.ToggleGroup(toggleGroupKeys, "hotKey", 1, () =>
+             {
+                 EditorGUILayout.LabelField("ctrl + click : Paint");
+                 EditorGUILayout.LabelField("ctrl + scroll : Change Size");
+                 EditorGUILayout.LabelField("alt + scroll : Change Density");
+                 EditorGUILayout.LabelField("ctrl + alt + Z : Cancel Paint");
+                 EditorGUILayout.LabelField("ctrl + alt + Click : Current height as Forced height");
+             }, "Box");
+            toggleGroupGizmo = Edit.ToggleGroup(toggleGroupGizmo, "Gizmo", 1, () =>
+             {
+                 enableSceneGizmo = EditorGUILayout.Toggle(new GUIContent("Display Gizmo", "Display the scene UI"), enableSceneGizmo);
+                 if (enableSceneGizmo)
+                 {
+                     EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
-                    param.gizmoSize = EditorGUILayout.Toggle(new GUIContent("Size", ""), param.gizmoSize);
-                    param.gizmoDensity = EditorGUILayout.Toggle(new GUIContent("Density", ""), param.gizmoDensity);
-                    param.gizmoHeight = EditorGUILayout.Toggle(new GUIContent("Height", ""), param.gizmoHeight);
-                    param.gizmoLayer = EditorGUILayout.Toggle(new GUIContent("Layer", ""), param.gizmoLayer);
-                    param.gizmoName = EditorGUILayout.Toggle(new GUIContent("Name", ""), param.gizmoName);
-                    param.gizmoPosition = EditorGUILayout.Toggle(new GUIContent("Position", ""), param.gizmoPosition);
-                    param.gizmoCircle = EditorGUILayout.Toggle(new GUIContent("Circle", ""), param.gizmoCircle);
-                    Edit.Row(() =>
-                    {
-                        param.gizmoNormal = EditorGUILayout.Toggle(new GUIContent("Normal", ""), param.gizmoNormal);
-                        if (param.gizmoNormal)
-                        {
-                            gizmoNormalLenght = EditorGUILayout.FloatField(new GUIContent("Lenght", ""), gizmoNormalLenght);
-                        }
-                    });
-                }
-            }, "Box");
+                     param.gizmoSize = EditorGUILayout.Toggle(new GUIContent("Size", ""), param.gizmoSize);
+                     param.gizmoDensity = EditorGUILayout.Toggle(new GUIContent("Density", ""), param.gizmoDensity);
+                     param.gizmoHeight = EditorGUILayout.Toggle(new GUIContent("Height", ""), param.gizmoHeight);
+                     param.gizmoLayer = EditorGUILayout.Toggle(new GUIContent("Layer", ""), param.gizmoLayer);
+                     param.gizmoName = EditorGUILayout.Toggle(new GUIContent("Name", ""), param.gizmoName);
+                     param.gizmoPosition = EditorGUILayout.Toggle(new GUIContent("Position", ""), param.gizmoPosition);
+                     param.gizmoCircle = EditorGUILayout.Toggle(new GUIContent("Circle", ""), param.gizmoCircle);
+                     Edit.Row(() =>
+                     {
+                         param.gizmoNormal = EditorGUILayout.Toggle(new GUIContent("Normal", ""), param.gizmoNormal);
+                         if (param.gizmoNormal)
+                         {
+                             gizmoNormalLenght = EditorGUILayout.FloatField(new GUIContent("Lenght", ""), gizmoNormalLenght);
+                         }
+                     });
+                 }
+             }, "Box");
             toggleGroupEditor = Edit.ToggleGroup(toggleGroupEditor, "Editor", 1, () =>
             {
                 ROOT_PARENT_NAME = EditorGUILayout.TextField("Root Parent Name:", ROOT_PARENT_NAME);
@@ -349,70 +351,72 @@ namespace EditorSpace
                     {
                         clearMemory();
                     }
-                });                
+                });
             }, "Box");
-            
-        }
-		bool showList;
 
-		void DisplayMeshesSelected()
-		{
-			param.paintMask = EditorGUILayout.MaskField(new GUIContent("Paint Layer", "on which layer the tool will paint"), param.paintMask, layerNames.ToArray());
-			Edit.Row(() => {
-				if (GUILayout.Button("Add selection"))
-				{
-					GameObject[] objects = Selection.gameObjects;
-					if (objects != null && objects.Length > 0)
-					{
-						foreach (var item in objects)
-						{
-							MeshFilter filter = item.GetComponent<MeshFilter>();
-							if (filter != null && !param.filters.Contains(filter))
-							{
-								param.filters.Add(filter);
-							}
-						}
-					}
-				}
-				if (GUILayout.Button("Remove Empty"))
-				{
-					for (int i = 0; i < param.filters.Count; i++)
-					{
-						if (param.filters[i] == null)
-						{
-							param.filters.RemoveAt(i);
-							i--;
-						}
-					}
-				}
-			});
-			
-			showList = Edit.List("Meshes", showList, param.filters.Count, (int i, int count) => {
-				if (param.filters.Count <= i) param.filters.Add(null);
-				if (count < param.filters.Count) param.filters.RemoveAt(param.filters.Count - 1);
-				param.filters[i] = (MeshFilter)EditorGUILayout.ObjectField("", param.filters[i], typeof(MeshFilter), true);
-			});
-		}
+        }
+        bool showList;
+
+        void DisplayMeshesSelected()
+        {
+            param.paintMask = EditorGUILayout.MaskField(new GUIContent("Paint Layer", "on which layer the tool will paint"), param.paintMask, layerNames.ToArray());
+            Edit.Row(() =>
+            {
+                if (GUILayout.Button("Add selection"))
+                {
+                    GameObject[] objects = Selection.gameObjects;
+                    if (objects != null && objects.Length > 0)
+                    {
+                        foreach (var item in objects)
+                        {
+                            MeshFilter filter = item.GetComponent<MeshFilter>();
+                            if (filter != null && !param.filters.Contains(filter))
+                            {
+                                param.filters.Add(filter);
+                            }
+                        }
+                    }
+                }
+                if (GUILayout.Button("Remove Empty"))
+                {
+                    for (int i = 0; i < param.filters.Count; i++)
+                    {
+                        if (param.filters[i] == null)
+                        {
+                            param.filters.RemoveAt(i);
+                            i--;
+                        }
+                    }
+                }
+            });
+
+            showList = Edit.List("Meshes", showList, param.filters.Count, (int i, int count) =>
+            {
+                if (param.filters.Count <= i) param.filters.Add(null);
+                if (count < param.filters.Count) param.filters.RemoveAt(param.filters.Count - 1);
+                param.filters[i] = (MeshFilter)EditorGUILayout.ObjectField("", param.filters[i], typeof(MeshFilter), true);
+            });
+        }
 
         void paintTab()
         {
             Edit.Column(() =>
             {
-				DisplayMeshesSelected();
-				
+                DisplayMeshesSelected();
 
-				param.size = EditorGUILayout.FloatField("Size :", param.size);
+
+                param.size = EditorGUILayout.FloatField("Size :", param.size);
                 param.density = EditorGUILayout.IntField("Density :", param.density);
-				param.randomPosition = GUILayout.Toggle(param.randomPosition, "Random Position");
-				Edit.Row(() =>
+                param.randomPosition = GUILayout.Toggle(param.randomPosition, "Random Position");
+                Edit.Row(() =>
                 {
                     GUILayout.Label("Random Rotation :");
                     param.rndRotationX = GUILayout.Toggle(param.rndRotationX, "X");
                     param.rndRotationY = GUILayout.Toggle(param.rndRotationY, "Y");
                     param.rndRotationZ = GUILayout.Toggle(param.rndRotationZ, "Z");
                 });
-				param.rotationOffset = EditorGUILayout.Vector3Field("Rotation Offset", param.rotationOffset);
-				Edit.Row(() =>
+                param.rotationOffset = EditorGUILayout.Vector3Field("Rotation Offset", param.rotationOffset);
+                Edit.Row(() =>
                 {
                     param.proximityCheck = EditorGUILayout.Toggle("Proximity Check ", param.proximityCheck);
                     if (param.proximityCheck) param.proximityDistance = EditorGUILayout.Slider(param.proximityDistance, 0.1f, param.size);
@@ -423,7 +427,7 @@ namespace EditorSpace
                     if (GUILayout.Toggle(param.mode == PaintMode.Auto, "Default", EditorStyles.miniButtonLeft, GUILayout.MaxWidth(100))) param.mode = PaintMode.Auto;
                     if (GUILayout.Toggle(param.mode == PaintMode.Forced, "Y-Forced", EditorStyles.miniButtonMid, GUILayout.MaxWidth(100))) param.mode = PaintMode.Forced;
                     if (GUILayout.Toggle(param.mode == PaintMode.Snap, "Snap", EditorStyles.miniButtonRight, GUILayout.MaxWidth(100))) param.mode = PaintMode.Snap;
-					GUILayout.FlexibleSpace();
+                    GUILayout.FlexibleSpace();
                 });
                 if (param.mode == PaintMode.Auto)
                 {
@@ -440,14 +444,14 @@ namespace EditorSpace
                         param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
                     });
                 }
-				else if (param.mode == PaintMode.SnapToMesh)
-				{
-					Edit.Column(() =>
-					{
-						param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
-					});
-				}
-			},"Box");
+                else if (param.mode == PaintMode.SnapToMesh)
+                {
+                    Edit.Column(() =>
+                    {
+                        param.maxYPosition = EditorGUILayout.FloatField(new GUIContent("Roof height", "Define the max height needed for the object to spawn"), param.maxYPosition);
+                    });
+                }
+            }, "Box");
         }
 
         void prefabListGUI()
@@ -460,9 +464,10 @@ namespace EditorSpace
                     if (GUILayout.Button(" + ")) param.listSize++;
                     if (GUILayout.Button(" - ")) param.listSize--;
                 });
-				param.spawnedPrefix = EditorGUILayout.TextField("Spawned Prefix", param.spawnedPrefix);
+                param.spawnedPrefix = EditorGUILayout.TextField("Spawned Prefix", param.spawnedPrefix);
                 param.listSize = Mathf.Max(0, param.listSize);
-                togglePrefabs = Edit.ToggleGroup(togglePrefabs, "Prefabs", 0,() => {
+                togglePrefabs = Edit.ToggleGroup(togglePrefabs, "Prefabs", 0, () =>
+                {
                     for (int i = 0; i < param.objects.Count; i++)
                     {
                         Edit.Row(() =>
@@ -499,7 +504,7 @@ namespace EditorSpace
                 param.objects = new List<PaintObject>(tempObj);
             }
         }
-        
+
         #endregion
 
         #region SceneGUI
@@ -522,7 +527,7 @@ namespace EditorSpace
         /// </summary>
         void drawGizmo()
         {
-			if (!enableSceneGizmo) return;
+            if (!enableSceneGizmo) return;
             if (isPainting)
                 Handles.color = Color.red;
             else
@@ -532,25 +537,25 @@ namespace EditorSpace
 
             if (mouseHitPoint.transform)
             {
-				if (paintPosition == null)
-				{
-					paintPosition = new GameObject(TEMPORARY_OBJECT_NAME).transform;
-					paintPosition.gameObject.AddComponent<EditorSceneGizmo>();
-				}
-				
+                if (paintPosition == null)
+                {
+                    paintPosition = new GameObject(TEMPORARY_OBJECT_NAME).transform;
+                    paintPosition.gameObject.AddComponent<EditorSceneGizmo>();
+                }
 
-				paintPosition.rotation = mouseHitPoint.transform.rotation;
+
+                paintPosition.rotation = mouseHitPoint.transform.rotation;
                 paintPosition.forward = mouseHitPoint.normal;
                 if (param.mode == PaintMode.Forced) pos.y = param.heightForced;
                 if (param.gizmoNormal) Handles.ArrowCap(3, mouseHitPoint.point, paintPosition.rotation, gizmoNormalLenght);
                 if (param.gizmoCircle) Handles.CircleCap(2, currentMousePos, paintPosition.rotation, param.size);
                 paintPosition.up = mouseHitPoint.normal;
             }
-            
-            Handles.BeginGUI();
-			
 
-			GUIStyle style = new GUIStyle();
+            Handles.BeginGUI();
+
+
+            GUIStyle style = new GUIStyle();
             style.normal.textColor = Color.black;
             GUILayout.BeginArea(new Rect(currentEvent.mousePosition.x + 10, currentEvent.mousePosition.y + 10, 250, 100));
             if (param.gizmoSize) GUILayout.TextField("Size " + param.size, style);
@@ -559,22 +564,22 @@ namespace EditorSpace
             if (param.gizmoLayer) GUILayout.TextField("Layer " + (mouseHitPoint.collider ? LayerMask.LayerToName(mouseHitPoint.collider.gameObject.layer) : "none"), style);
             if (param.gizmoName) GUILayout.TextField("Name " + (mouseHitPoint.collider ? mouseHitPoint.collider.name : "none"), style);
             if (param.gizmoPosition) GUILayout.TextField("Position " + currentMousePos.ToString(), style);
-           
+
             if (param.mode == PaintMode.Forced)
                 GUILayout.TextField("Force-Height " + param.heightForced, style);
             GUILayout.EndArea();
 
-			
-			Handles.EndGUI();
-			DrawingSceneSpawner();
-		}
+
+            Handles.EndGUI();
+            DrawingSceneSpawner();
+        }
 
         /// <summary>
         /// Update the current mouse position
         /// </summary>
         void updateMousePos(SceneView sceneView)
         {
-            if(currentEvent.control) HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));    // disable selection rectangle
+            if (currentEvent.control) HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));    // disable selection rectangle
             RaycastHit hit;
             Ray ray = sceneView.camera.ScreenPointToRay(new Vector2(currentEvent.mousePosition.x, sceneView.camera.pixelHeight - currentEvent.mousePosition.y));
             if (Raycaster(ray, out hit, 1000, param.paintMask))
@@ -670,10 +675,10 @@ namespace EditorSpace
             if (memory != null && memory.Count > 0)
             {
                 int index = memory.Count - 1; // Get last group painted
-				foreach (var obj in memory[index])
-				{
-					DestroyImmediate(obj);
-				}
+                foreach (var obj in memory[index])
+                {
+                    DestroyImmediate(obj);
+                }
                 memory[index].Clear();  // Clear the list containing the group
                 memory.RemoveAt(index); // Remove the list
             }
@@ -758,10 +763,10 @@ namespace EditorSpace
 
         Vector3 GetSpawnPosition(Vector3 direction, Vector3[] otherSpawn)
         {
-			if (!param.randomPosition)
-				return currentMousePos;
+            if (!param.randomPosition)
+                return currentMousePos;
 
-			if (param.proximityCheck)
+            if (param.proximityCheck)
             {
                 Vector3 tempPos;
                 bool success;
@@ -806,16 +811,16 @@ namespace EditorSpace
             if (prefabObj != null)
             {
                 go = (GameObject)PrefabUtility.InstantiatePrefab(prefabObj);
-				go.name = param.spawnedPrefix + go.name;
+                go.name = param.spawnedPrefix + go.name;
 
-				
-				if (paintPosition)
+
+                if (paintPosition)
                 {
                     go.transform.rotation = paintPosition.rotation;
                     go.transform.up = paintPosition.up;
-					if (param.rotationOffset != Vector3.zero)
-						go.transform.Rotate(param.rotationOffset);
-				}
+                    if (param.rotationOffset != Vector3.zero)
+                        go.transform.Rotate(param.rotationOffset);
+                }
                 else
                 {
                     go.transform.rotation = Quaternion.identity;
@@ -836,20 +841,20 @@ namespace EditorSpace
                 {
                     go.transform.position = new Vector3(pos.x, param.heightForced, pos.z);
                 }
-				else if (param.mode == PaintMode.Snap)
-				{
-					PhysicRaycast(go, rndIndex);
-				}
-				else if (param.mode == PaintMode.Snap)
-				{
-					PhysicRaycast(go, rndIndex);
-				}
-				else
+                else if (param.mode == PaintMode.Snap)
+                {
+                    PhysicRaycast(go, rndIndex);
+                }
+                else if (param.mode == PaintMode.Snap)
+                {
+                    PhysicRaycast(go, rndIndex);
+                }
+                else
                 {
                     go.transform.position = pos;
                 }
 
-               
+
                 if (go)
                 {
                     AddObjectToGroup(go, rndIndex);
@@ -869,9 +874,9 @@ namespace EditorSpace
             {
                 parent = new GameObject(GROUP_NAME + (param.addPrefabNameToGroup ? param.objects[index].customName : "")).transform;
                 parent.SetParent(rootParent.transform);
-				if (groups == null)
-					groups = new List<GameObject>();
-				groups.Add(parent.gameObject);
+                if (groups == null)
+                    groups = new List<GameObject>();
+                groups.Add(parent.gameObject);
             }
             obj.transform.SetParent(parent);
         }
@@ -890,20 +895,20 @@ namespace EditorSpace
             obj.transform.position = position;
             obj.SetActive(false);
             RaycastHit groundHit;
-			Ray ray = new Ray(position, -obj.transform.up);
-			if (Raycaster(ray, out groundHit))
+            Ray ray = new Ray(position, -obj.transform.up);
+            if (Raycaster(ray, out groundHit))
             {
-				Debug.Log("Object found");
-				RaycastHit objectHit;
+                Debug.Log("Object found");
+                RaycastHit objectHit;
                 if (LayerContain(param.paintMask, groundHit.collider.gameObject.layer))
                 {
-					Debug.Log("Good layer");
-					obj.SetActive(true);
-					Ray ray2 = new Ray(groundHit.point, obj.transform.up);
+                    Debug.Log("Good layer");
+                    obj.SetActive(true);
+                    Ray ray2 = new Ray(groundHit.point, obj.transform.up);
                     if (Raycaster(ray2, out objectHit) && obj.layer == objectHit.collider.gameObject.layer)
                     {
-						Debug.Log("Back ray found object");
-						Vector3 newPos;
+                        Debug.Log("Back ray found object");
+                        Vector3 newPos;
                         float differencialDistance = Vector3.Distance(objectHit.point, obj.transform.position);
                         newPos = groundHit.point + (obj.transform.up * differencialDistance);
                         obj.transform.position = newPos;
@@ -915,24 +920,24 @@ namespace EditorSpace
 
             // Should have returned before
             DestroyImmediate(obj);
-			//Debug.Log("Could not find appropriate spawn position");
+            //Debug.Log("Could not find appropriate spawn position");
         }
 
-		bool Raycaster(Ray ray, GameObject obj, out RaycastHit objectHit)
-		{
-			return Physics.Raycast(ray, out objectHit, 200, obj.layer);
-		}
+        bool Raycaster(Ray ray, GameObject obj, out RaycastHit objectHit)
+        {
+            return Physics.Raycast(ray, out objectHit, 200, obj.layer);
+        }
 
-		bool Raycaster(Ray ray, out RaycastHit objectHit)
-		{
-			return Physics.Raycast(ray, out objectHit);
-		}
+        bool Raycaster(Ray ray, out RaycastHit objectHit)
+        {
+            return Physics.Raycast(ray, out objectHit);
+        }
 
-		bool Raycaster(Ray ray, out RaycastHit objectHit, float distance, LayerMask mask)
-		{
-			return Physics.Raycast(ray, out objectHit, distance, mask);
-		}
-		
-		#endregion
-	}
+        bool Raycaster(Ray ray, out RaycastHit objectHit, float distance, LayerMask mask)
+        {
+            return Physics.Raycast(ray, out objectHit, distance, mask);
+        }
+
+        #endregion
+    }
 }
